@@ -8,3 +8,10 @@ assets/image/Legend of Mushroom Assets*/
 .DS_Store
 Thumbs.db
 *.swp
+
+# Source / working files — Excel data sources and raw images used during
+# development but not deployed to the website
+Image/Calculator_Scroll/
+Image/Calculator_Soul/
+Image/Lamps/
+assets/Documents/
