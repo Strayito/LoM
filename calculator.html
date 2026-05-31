@@ -165,6 +165,29 @@
     .lamp-prob-table tr:last-child td { border-bottom:none; }
     .lamp-prob-bar { height:5px; border-radius:3px; display:inline-block; vertical-align:middle; margin-left:6px; opacity:0.75; }
     .lamp-section-label { font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.07em; margin-bottom:6px; }
+
+    /* ── Ring Calculator ── */
+    .ring-rank-btns { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+    .ring-rank-btn {
+      padding:6px 12px; border-radius:var(--r);
+      border:1px solid var(--border); background:var(--bg-secondary);
+      color:var(--text-secondary); font-size:0.8rem; font-weight:600;
+      cursor:pointer; transition:all 0.15s;
+    }
+    .ring-rank-btn.active { border-color:var(--gold); color:var(--gold); background:rgba(232,192,64,0.1); }
+    .ring-cur-btns { display:flex; gap:6px; }
+    .ring-cur-btn {
+      padding:7px 14px; border-radius:var(--r);
+      border:1px solid var(--border); background:var(--bg-secondary);
+      color:var(--text-secondary); font-size:0.82rem; font-weight:600;
+      cursor:pointer; transition:all 0.15s;
+    }
+    .ring-cur-btn.active[data-cur="hearts"] { border-color:#e05c6f; color:#e05c6f; background:rgba(224,92,111,0.1); }
+    .ring-cur-btn.active[data-cur="db"]     { border-color:var(--gold); color:var(--gold); background:rgba(232,192,64,0.1); }
+    .ring-result-hl { background:rgba(232,192,64,0.06); border-radius:var(--r); }
+    .ring-result-hl .val { color:var(--gold) !important; font-size:1.08rem; }
+    .ring-divider { border:none; border-top:1px solid var(--border); margin:10px 0; }
+    .ring-sub-label { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.07em; margin:10px 0 4px; }
   </style>
 </head>
 <body>
@@ -229,6 +252,9 @@
     </button>
     <button class="tab-btn" data-tab="lamp">
       <img src="assets/image/lom/lamp_icon.png" alt="" style="height:18px;vertical-align:middle;margin-right:4px"><span class="lang-fr">Lampe</span><span class="lang-en hidden">Lamp</span><span class="lang-sk hidden">Lampa</span>
+    </button>
+    <button class="tab-btn" data-tab="ring">
+      💍 <span class="lang-fr">Bague</span><span class="lang-en hidden">Ring</span><span class="lang-sk hidden">Prsteň</span>
     </button>
   </div>
 
@@ -1685,6 +1711,198 @@
     </div>
   </div>
 
+  <!-- ===== RING CALCULATOR ===== -->
+  <div class="tab-content" id="tab-ring">
+    <div class="calc-layout">
+
+      <form id="ring-form" onsubmit="return false">
+
+        <div class="section-chip">
+          💍 <span class="lang-fr">Niveau actuel de la bague</span>
+             <span class="lang-en hidden">Current ring level</span>
+             <span class="lang-sk hidden">Aktuálna úroveň prsteňa</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ring-from-lv">
+              ▶ <span class="lang-fr">Niveau actuel</span>
+                 <span class="lang-en hidden">Current level</span>
+                 <span class="lang-sk hidden">Aktuálna úroveň</span>
+            </label>
+            <input class="form-input" type="number" id="ring-from-lv" value="1" min="1" max="300" style="max-width:120px">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="ring-progress">
+              💗 <span class="lang-fr">Coeurs collectés au niv. actuel</span>
+                 <span class="lang-en hidden">Hearts collected at current level</span>
+                 <span class="lang-sk hidden">Srdcia na aktuálnej úrovni</span>
+            </label>
+            <input class="form-input" type="number" id="ring-progress" value="0" min="0" style="max-width:120px">
+            <div class="input-hint" id="ring-progress-hint" style="color:var(--text-muted);font-size:0.76rem;margin-top:4px"></div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top:4px">
+          <label class="form-label" for="ring-to-lv">
+            ◀ <span class="lang-fr">Niveau cible</span>
+               <span class="lang-en hidden">Target level</span>
+               <span class="lang-sk hidden">Cieľová úroveň</span>
+          </label>
+          <input class="form-input" type="number" id="ring-to-lv" value="10" min="2" max="301" style="max-width:120px">
+        </div>
+
+        <div class="section-chip" style="margin-top:20px">
+          🎖️ <span class="lang-fr">Rang d'intimité (conjoint)</span>
+             <span class="lang-en hidden">Intimacy Rank (spouse)</span>
+             <span class="lang-sk hidden">Úroveň intimity (manžel/manželka)</span>
+        </div>
+        <div class="ring-rank-btns" id="ring-rank-btns"></div>
+
+        <div class="form-divider"></div>
+
+        <div class="section-chip">
+          ⚡ <span class="lang-fr">Combien de niveaux avec mes ressources ?</span>
+             <span class="lang-en hidden">How many levels with my resources?</span>
+             <span class="lang-sk hidden">Koľko úrovní s mojimi zdrojmi?</span>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="ring-bonus-amount">
+              <span class="lang-fr">Quantité disponible</span>
+              <span class="lang-en hidden">Available amount</span>
+              <span class="lang-sk hidden">Dostupné množstvo</span>
+            </label>
+            <input class="form-input" type="number" id="ring-bonus-amount" value="500" min="0" style="max-width:160px">
+          </div>
+          <div class="form-group">
+            <label class="form-label">
+              <span class="lang-fr">Devise</span>
+              <span class="lang-en hidden">Currency</span>
+              <span class="lang-sk hidden">Mena</span>
+            </label>
+            <div class="ring-cur-btns">
+              <button type="button" class="ring-cur-btn active" data-cur="hearts">💗 <span class="lang-fr">Coeurs</span><span class="lang-en hidden">Hearts</span><span class="lang-sk hidden">Srdcia</span></button>
+              <button type="button" class="ring-cur-btn" data-cur="db">💎 DB</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-box" style="font-size:0.82rem;margin-top:10px">
+          💡 <span class="lang-fr">Taux : <strong>100 💗 = 5 💎 DB</strong> — soit 1 DB = 20 coeurs. Les coeurs du niveau en cours sont également comptés.</span>
+             <span class="lang-en hidden">Rate: <strong>100 💗 = 5 💎 DB</strong> — i.e. 1 DB = 20 hearts. Current-level progress hearts are also counted.</span>
+             <span class="lang-sk hidden">Kurz: <strong>100 💗 = 5 💎 DB</strong> — teda 1 DB = 20 sŕdc. Srdcia aktuálnej úrovne sú tiež zarátané.</span>
+        </div>
+
+        <div class="info-box" style="font-size:0.82rem;margin-top:8px;border-color:rgba(32,212,168,0.3)">
+          📜 <span class="lang-fr">Données disponibles jusqu'au <strong>Lv 292</strong> (gaps Lv 292–298, Lv 300 partiel).</span>
+             <span class="lang-en hidden">Data available up to <strong>Lv 292</strong> (gaps Lv 292–298, Lv 300 partial).</span>
+             <span class="lang-sk hidden">Dáta dostupné do <strong>Lv 292</strong> (medzery Lv 292–298, Lv 300 čiastočný).</span>
+          <a href="data/rings.html" style="color:var(--teal);margin-left:6px">→ <span class="lang-fr">Table complète</span><span class="lang-en hidden">Full table</span><span class="lang-sk hidden">Celá tabuľka</span></a>
+        </div>
+
+      </form>
+
+      <!-- Results panel -->
+      <div class="results-panel sticky-results">
+        <div class="results-header">
+          💍 <span class="lang-fr">Résultats</span>
+             <span class="lang-en hidden">Results</span>
+             <span class="lang-sk hidden">Výsledky</span>
+        </div>
+        <div class="results-body">
+
+          <!-- Cost section -->
+          <div class="result-row">
+            <span class="lbl">
+              💗 <span class="lang-fr">Coeurs nécessaires</span>
+                 <span class="lang-en hidden">Hearts needed</span>
+                 <span class="lang-sk hidden">Potrebné srdcia</span>
+            </span>
+            <span class="val" id="ring-res-hearts">—</span>
+          </div>
+          <div class="result-row ring-result-hl">
+            <span class="lbl">
+              💎 <span class="lang-fr">Diamants blancs (DB)</span>
+                 <span class="lang-en hidden">White Diamonds (DB)</span>
+                 <span class="lang-sk hidden">Biele diamanty (DB)</span>
+            </span>
+            <span class="val" id="ring-res-db">—</span>
+          </div>
+
+          <hr class="ring-divider">
+
+          <!-- Stats section -->
+          <div class="ring-sub-label">
+            📊 <span class="lang-fr">% de stats (anneau)</span>
+               <span class="lang-en hidden">Ring stats %</span>
+               <span class="lang-sk hidden">% štatistík (prsteň)</span>
+          </div>
+          <div class="result-row">
+            <span class="lbl" id="ring-stat-from-lbl">
+              <span class="lang-fr">Stats Lv départ</span>
+              <span class="lang-en hidden">Start Lv stats</span>
+              <span class="lang-sk hidden">Štat. počiat. úr.</span>
+            </span>
+            <span class="val" id="ring-res-stat-from">—</span>
+          </div>
+          <div class="result-row">
+            <span class="lbl" id="ring-stat-to-lbl">
+              <span class="lang-fr">Stats Lv cible</span>
+              <span class="lang-en hidden">Target Lv stats</span>
+              <span class="lang-sk hidden">Štat. cieľovej úr.</span>
+            </span>
+            <span class="val" id="ring-res-stat-to">—</span>
+          </div>
+          <div class="result-row ring-result-hl">
+            <span class="lbl">
+              📈 <span class="lang-fr">Stats gagnées</span>
+                 <span class="lang-en hidden">Stats gained</span>
+                 <span class="lang-sk hidden">Získané štatistiky</span>
+            </span>
+            <span class="val" id="ring-res-stat-gain">—</span>
+          </div>
+
+          <hr class="ring-divider">
+
+          <!-- Bonus projection section -->
+          <div class="ring-sub-label">
+            ⚡ <span class="lang-fr">Projection ressources</span>
+               <span class="lang-en hidden">Resource projection</span>
+               <span class="lang-sk hidden">Projekcia zdrojov</span>
+          </div>
+          <div class="result-row">
+            <span class="lbl">
+              <span class="lang-fr">Niveaux gagnables</span>
+              <span class="lang-en hidden">Gainable levels</span>
+              <span class="lang-sk hidden">Získateľné úrovne</span>
+            </span>
+            <span class="val" id="ring-bonus-levels">—</span>
+          </div>
+          <div class="result-row">
+            <span class="lbl">
+              <span class="lang-fr">Niveau atteignable</span>
+              <span class="lang-en hidden">Reachable level</span>
+              <span class="lang-sk hidden">Dosiahnuteľná úroveň</span>
+            </span>
+            <span class="val" id="ring-bonus-to-lv">—</span>
+          </div>
+          <div class="result-row ring-result-hl">
+            <span class="lbl">
+              📈 <span class="lang-fr">Stats gagnées</span>
+                 <span class="lang-en hidden">Stats gained</span>
+                 <span class="lang-sk hidden">Získané štatistiky</span>
+            </span>
+            <span class="val" id="ring-bonus-stat-gain">—</span>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Formula Reference — en bas de page -->
   <div class="formula-ref" style="margin-top:32px">
     <h4>
@@ -1720,6 +1938,7 @@
 <script src="js/calculator.js"></script>
 <script src="assets/js/data/clockwinder.js"></script>
 <script src="assets/js/mount-calc.js"></script>
+<script src="assets/js/data/ring.js"></script>
 <script>
   document.getElementById('hamburger').addEventListener('click', function() {
     document.getElementById('navLinks').classList.toggle('open');
@@ -1852,6 +2071,191 @@
       if (!form) return;
       form.addEventListener('input', calc);
       calc();
+    });
+  })();
+
+  // ── Ring Calculator ──
+  (function () {
+    'use strict';
+
+    function parsePct(s) {
+      if (!s || s === '~' || s === '') return null;
+      s = String(s).trim();
+      if (!s.endsWith('%')) return null;
+      s = s.slice(0, -1);
+      if (/K$/i.test(s)) return parseFloat(s) * 1000;
+      if (/M$/i.test(s)) return parseFloat(s) * 1000000;
+      return parseFloat(s);
+    }
+
+    function fmtPct(v) {
+      if (v === null || v === undefined || isNaN(v)) return 'N/A';
+      if (v >= 1000000) return (v / 1000000).toFixed(2) + 'M%';
+      if (v >= 1000)    return (v / 1000).toFixed(1) + 'K%';
+      if (v >= 100)     return Math.round(v) + '%';
+      return v.toFixed(1) + '%';
+    }
+
+    function fmtN(n) { return Math.round(n).toLocaleString('fr-FR'); }
+    function setEl(id, v) { var e = document.getElementById(id); if (e) e.textContent = v; }
+
+    /* Build lookup tables from ring[] */
+    var rCost  = {};  /* rCost[fromLv]  = hearts to go fromLv → fromLv+1 */
+    var rStats = {};  /* rStats[lv]     = stats[7] at that level          */
+    var rCumul = {};  /* rCumul[lv]     = total hearts from Lv1 to reach lv */
+
+    ring.forEach(function (row) {
+      if (!row[0]) return;
+      var k = String(row[0]).trim();
+      if (k === 'ring' || k === 'Lv' || k === '') return;
+
+      if (k === '1') {
+        rStats[1] = row.slice(3).map(parsePct);
+        rCumul[1] = 0;
+        return;
+      }
+      if (k.indexOf('→') === -1) return;
+
+      var parts  = k.split('→');
+      var fromLv = parseInt(parts[0]);
+      var toLv   = parseInt(parts[1]);
+      if (isNaN(fromLv) || isNaN(toLv)) return;
+
+      var cost  = (row[1] !== '' && row[1] != null) ? parseInt(row[1])  : null;
+      var cumul = (row[2] !== '' && row[2] != null) ? parseInt(row[2])  : null;
+      var stats = row.slice(3).map(parsePct);
+
+      if (cost  != null && !isNaN(cost))  rCost[fromLv] = cost;
+      if (cumul != null && !isNaN(cumul)) rCumul[toLv]  = cumul;
+      rStats[toLv] = stats;
+    });
+
+    /* Fill any gaps in rCumul using sequential cost sums */
+    var runC = 0;
+    for (var lv = 2; lv <= 302; lv++) {
+      if (rCumul[lv] !== undefined) {
+        runC = rCumul[lv]; /* trust stored cumulative */
+      } else {
+        var c = rCost[lv - 1];
+        if (c && !isNaN(c)) runC += c;
+        rCumul[lv] = runC;
+      }
+    }
+
+    function cumulAt(lv) { return lv <= 1 ? 0 : (rCumul[lv] || 0); }
+    function statsAt(lv, ri) {
+      var s = rStats[lv];
+      return (s && s[ri] != null) ? s[ri] : null;
+    }
+
+    var RANKS   = ['Before Wed.', 'Rank I', 'Rank II', 'Rank III', 'Rank IV', 'Rank V', 'Rank VI'];
+    var MAX_LV  = 301;
+    var curRank = 1; /* default: Rank I */
+
+    function calcRing() {
+      var fromLv = Math.max(1, Math.min(300, parseInt(document.getElementById('ring-from-lv').value)   || 1));
+      var prog   = Math.max(0,              parseInt(document.getElementById('ring-progress').value)    || 0);
+      var toLv   = Math.max(fromLv + 1, Math.min(MAX_LV, parseInt(document.getElementById('ring-to-lv').value) || (fromLv + 1)));
+
+      var stepCost = rCost[fromLv] || 0;
+      if (stepCost > 0) prog = Math.min(prog, stepCost - 1);
+
+      /* Progress hint under the field */
+      var hint = document.getElementById('ring-progress-hint');
+      if (hint) hint.textContent = stepCost > 0 ? (prog + ' / ' + stepCost + ' 💗  pour Lv ' + fromLv + ' → ' + (fromLv + 1)) : '';
+
+      /* Hearts & DB needed */
+      var heartsNeed = Math.max(0, cumulAt(toLv) - cumulAt(fromLv) - prog);
+      /* 100 💗 = 5 DB  →  1 DB = 20 💗. Round up to whole packs of 5 DB (= 100 💗). */
+      var dbNeed = heartsNeed === 0 ? 0 : Math.ceil(heartsNeed / 100) * 5;
+
+      /* Stats */
+      var sFrom = statsAt(fromLv, curRank);
+      var sTo   = statsAt(toLv,   curRank);
+      var sGain = (sFrom != null && sTo != null) ? (sTo - sFrom) : null;
+
+      /* Update results */
+      setEl('ring-res-hearts',   fmtN(heartsNeed) + ' 💗');
+      setEl('ring-res-db',       fmtN(dbNeed) + ' 💎 DB');
+      setEl('ring-res-stat-from', fmtPct(sFrom));
+      setEl('ring-res-stat-to',   fmtPct(sTo));
+      setEl('ring-res-stat-gain', sGain != null ? '+' + fmtPct(sGain) : 'N/A');
+
+      /* Dynamic level labels */
+      var el1 = document.getElementById('ring-stat-from-lbl');
+      var el2 = document.getElementById('ring-stat-to-lbl');
+      var lg  = localStorage.getItem('siteLang') || 'fr';
+      if (el1) el1.textContent = (lg === 'fr' ? 'Stats Lv ' : 'Stats Lv ') + fromLv;
+      if (el2) el2.textContent = (lg === 'fr' ? 'Stats Lv ' : 'Stats Lv ') + toLv;
+
+      calcBonus();
+    }
+
+    function calcBonus() {
+      var fromLv   = Math.max(1, Math.min(300, parseInt(document.getElementById('ring-from-lv').value)  || 1));
+      var prog     = Math.max(0,              parseInt(document.getElementById('ring-progress').value)   || 0);
+      var stepCost = rCost[fromLv] || 0;
+      if (stepCost > 0) prog = Math.min(prog, stepCost - 1);
+
+      var amount = Math.max(0, parseInt(document.getElementById('ring-bonus-amount').value) || 0);
+      var isDB   = !!document.querySelector('#ring-form .ring-cur-btn.active[data-cur="db"]');
+      var hearts = isDB ? amount * 20 : amount;
+
+      /* Budget = (cumulative already spent to be at fromLv) + progress + new hearts */
+      var budget = cumulAt(fromLv) + prog + hearts;
+
+      var reachable = fromLv;
+      for (var lv = fromLv + 1; lv <= MAX_LV; lv++) {
+        var c = cumulAt(lv);
+        if (c > 0 && c <= budget) reachable = lv;
+        else if (c > budget)      break;
+      }
+
+      var levelsGained = reachable - fromLv;
+      var sFrom = statsAt(fromLv,   curRank);
+      var sTo   = statsAt(reachable, curRank);
+      var sGain = (sFrom != null && sTo != null) ? (sTo - sFrom) : null;
+
+      setEl('ring-bonus-levels',    '+' + levelsGained + ' Lv');
+      setEl('ring-bonus-to-lv',     'Lv ' + reachable);
+      setEl('ring-bonus-stat-gain', sGain != null ? '+' + fmtPct(sGain) : 'N/A');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      /* Build rank buttons */
+      var rc = document.getElementById('ring-rank-btns');
+      if (!rc) return;
+      RANKS.forEach(function (lbl, i) {
+        var btn = document.createElement('button');
+        btn.type      = 'button';
+        btn.className = 'ring-rank-btn' + (i === curRank ? ' active' : '');
+        btn.textContent = lbl;
+        btn.dataset.ri  = i;
+        btn.addEventListener('click', function () {
+          curRank = parseInt(this.dataset.ri);
+          rc.querySelectorAll('.ring-rank-btn').forEach(function (b) { b.classList.remove('active'); });
+          this.classList.add('active');
+          calcRing();
+        });
+        rc.appendChild(btn);
+      });
+
+      /* Wire inputs */
+      ['ring-from-lv', 'ring-progress', 'ring-to-lv', 'ring-bonus-amount'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.addEventListener('input', calcRing);
+      });
+
+      /* Currency toggle */
+      document.querySelectorAll('#ring-form .ring-cur-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          document.querySelectorAll('#ring-form .ring-cur-btn').forEach(function (b) { b.classList.remove('active'); });
+          this.classList.add('active');
+          calcBonus();
+        });
+      });
+
+      calcRing();
     });
   })();
 
