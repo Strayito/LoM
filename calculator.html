@@ -89,6 +89,15 @@
       padding: 0;
     }
     .bsc-section.expanded .bsc-expand-btn { transform: rotate(45deg); }
+    .bsc-other-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 6px 4px; margin-top: 8px;
+      border-top: 1px dashed rgba(255,255,255,0.08);
+      font-size: 0.78rem;
+    }
+    .bsc-other-lbl { color: var(--text-muted); }
+    .bsc-other-val { font-weight: 700; color: var(--text-muted); font-size: 0.82rem; }
+    .bsc-other-val.overflow { color: var(--red); }
     .bsc-detail { margin-top:12px; padding:14px; background:var(--bg-secondary); border-radius:var(--r); border:1px solid var(--border); }
     .bsc-detail.hidden { display:none; }
 
@@ -878,6 +887,12 @@
               </label>
               <input class="form-input bsc-flat-input" type="number" value="0" min="0" step="1">
             </div>
+            <div class="bsc-other-row">
+              <span class="bsc-other-lbl">
+                ↳ <span class="lang-fr">Autres sources</span><span class="lang-en hidden">Other sources</span><span class="lang-sk hidden">Ostatné zdroje</span>
+              </span>
+              <span id="bsc-flat-other-val" class="bsc-other-val">—</span>
+            </div>
           </div>
         </div>
 
@@ -987,6 +1002,12 @@
                 <input class="form-input bsc-base-input" type="number" value="0" min="0" step="0.01">
               </div>
             </div>
+            <div class="bsc-other-row">
+              <span class="bsc-other-lbl">
+                ↳ <span class="lang-fr">Autres sources</span><span class="lang-en hidden">Other sources</span><span class="lang-sk hidden">Ostatné zdroje</span>
+              </span>
+              <span id="bsc-base-other-val" class="bsc-other-val">—</span>
+            </div>
           </div>
         </div>
 
@@ -1067,6 +1088,12 @@
                 </label>
                 <input class="form-input bsc-global-input" type="number" value="0" min="0" step="0.01">
               </div>
+            </div>
+            <div class="bsc-other-row">
+              <span class="bsc-other-lbl">
+                ↳ <span class="lang-fr">Autres sources</span><span class="lang-en hidden">Other sources</span><span class="lang-sk hidden">Ostatné zdroje</span>
+              </span>
+              <span id="bsc-global-other-val" class="bsc-other-val">—</span>
             </div>
           </div>
         </div>
@@ -1925,27 +1952,6 @@
 
     </div>
 
-  <!-- ── Ring Efficiency Chart ── -->
-  <div style="margin-top:26px" id="ring-chart-section">
-    <div class="section-chip" style="margin-bottom:10px">
-      📊 <span class="lang-fr">Efficacité de la bague vs 10% Global (basé sur tes stats)</span>
-         <span class="lang-en hidden">Ring efficiency vs 10% Global (based on your stats)</span>
-         <span class="lang-sk hidden">Efektivita prsteňa vs 10% Global</span>
-    </div>
-    <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:.76rem;margin-bottom:10px;align-items:center">
-      <span><span style="display:inline-block;width:12px;height:12px;background:rgba(32,212,168,.85);border-radius:2px;margin-right:4px;vertical-align:middle"></span><span class="lang-fr">Bague &gt; Global (ATK+HP+DEF)</span><span class="lang-en hidden">Ring &gt; Global (ATK+HP+DEF)</span></span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:rgba(232,192,64,.85);border-radius:2px;margin-right:4px;vertical-align:middle"></span><span class="lang-fr">Bague &gt; Global (DEF seul)</span><span class="lang-en hidden">Ring &gt; Global (DEF only)</span></span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:rgba(224,64,64,.75);border-radius:2px;margin-right:4px;vertical-align:middle"></span><span class="lang-fr">Global &gt; Bague</span><span class="lang-en hidden">Global &gt; Ring</span></span>
-    </div>
-    <div style="position:relative;height:380px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--r-lg);padding:12px">
-      <canvas id="ring-eff-chart"></canvas>
-    </div>
-    <p style="font-size:.68rem;color:var(--text-muted);margin-top:6px;text-align:center;line-height:1.5">
-      <span class="lang-fr">Échelle logarithmique · Gain Rank I par 10 000 💗 · Seuils calculés avec BaseSum ATK 1 377 700%, GlobalSum 415% · Les pics = paliers ×10 (orange) et ×50 (vert vif)</span>
-      <span class="lang-en hidden">Log scale · Rank I gain per 10,000 💗 · Thresholds from BaseSum ATK 1,377,700%, GlobalSum 415% · Spikes = ×10 (orange) and ×50 (bright green) milestones</span>
-    </p>
-  </div>
-
   </div>
 
   <!-- Formula Reference — en bas de page -->
@@ -1983,7 +1989,6 @@
 <script src="js/calculator.js"></script>
 <script src="assets/js/data/clockwinder.js"></script>
 <script src="assets/js/mount-calc.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="assets/js/data/ring.js"></script>
 <script>
   document.getElementById('hamburger').addEventListener('click', function() {
@@ -2359,179 +2364,7 @@
       }
 
       calcRing();
-      buildRingChart();
     });
-
-    /* ── Ring Efficiency Chart ── */
-    function buildRingChart() {
-      if (typeof Chart === 'undefined') return;
-      var canvas = document.getElementById('ring-eff-chart');
-      if (!canvas) return;
-
-      /* Thresholds (per 10 000 💗) — computed from user's stats:
-         ATK: 10×(100+1377700)/(100+415.09) = 26 749
-         HP:  10×(100+1350000)/(100+484)     ≈ 23 000
-         DEF: 10×(100+1560000)/(100+920)     ≈ 15 299 */
-      var T_ATK = 26749, T_HP = 23000, T_DEF = 15299;
-
-      var lvs = [], effs = [], bgs = [];
-
-      /* One bar per ring level transition 2–292 */
-      for (var lv = 2; lv <= 292; lv++) {
-        var cost  = rCost[lv - 1];
-        if (!cost || cost <= 0) continue;
-        var riCur  = statsAt(lv,     1);   /* Rank I at destination level */
-        var riPrev = statsAt(lv - 1, 1);   /* Rank I at source level      */
-        if (riCur === null || riPrev === null) continue;
-        var gain = riCur - riPrev;
-        if (gain <= 0) continue;
-
-        var eff = (gain / cost) * 10000;
-        lvs.push(lv);
-        effs.push(Math.max(eff, 60));  /* log-scale floor */
-
-        /* Opacity: ×50 milestone brightest, ×10 second, others dim */
-        var a = (lv % 50 === 1) ? 1 : (lv % 10 === 1) ? 0.88 : 0.55;
-        bgs.push(
-          eff >= T_ATK ? 'rgba(32,212,168,' + a + ')' :
-          eff >= T_DEF ? 'rgba(232,192,64,' + a + ')' :
-                         'rgba(224,64,64,'  + a + ')'
-        );
-      }
-
-      /* Final milestone 300→301 */
-      var ri300 = statsAt(300, 1), ri301 = statsAt(301, 1), c300 = rCost[300];
-      if (ri300 !== null && ri301 !== null && c300) {
-        var e301 = ((ri301 - ri300) / c300) * 10000;
-        lvs.push(301);
-        effs.push(e301);
-        bgs.push(e301 >= T_ATK ? 'rgba(32,212,168,1)' : 'rgba(232,192,64,0.9)');
-      }
-
-      var n = lvs.length;
-      var flat = function (v) { return new Array(n).fill(v); };
-
-      Chart.defaults.color = '#7a8fa8';
-
-      new Chart(canvas.getContext('2d'), {
-        type: 'bar',
-        data: {
-          labels: lvs,
-          datasets: [
-            {
-              label: 'Efficacité (%/10k 💗)',
-              data: effs,
-              backgroundColor: bgs,
-              borderWidth: 0,
-              categoryPercentage: 1.0,
-              barPercentage: 0.98,
-              order: 2
-            },
-            {
-              label: '── Seuil ATK (' + T_ATK.toLocaleString('fr-FR') + '%)',
-              data: flat(T_ATK),
-              type: 'line', borderColor: '#e04040', borderWidth: 2.5,
-              borderDash: [8, 4], pointRadius: 0, fill: false, order: 1
-            },
-            {
-              label: '── Seuil HP (~23 000%)',
-              data: flat(T_HP),
-              type: 'line', borderColor: '#e87820', borderWidth: 1.5,
-              borderDash: [5, 4], pointRadius: 0, fill: false, order: 1
-            },
-            {
-              label: '── Seuil DEF (~15 300%)',
-              data: flat(T_DEF),
-              type: 'line', borderColor: '#e8c040', borderWidth: 1.5,
-              borderDash: [4, 3], pointRadius: 0, fill: false, order: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: { duration: 700 },
-          scales: {
-            y: {
-              type: 'logarithmic',
-              title: {
-                display: true,
-                text: 'Gain Rank I % / 10 000 💗',
-                color: '#5a7a9a',
-                font: { size: 11 }
-              },
-              ticks: {
-                color: '#6a8aa8',
-                font: { size: 10 },
-                callback: function (v) {
-                  var milestones = [100, 500, 1000, 5000, 10000, 50000, 100000, 500000];
-                  if (milestones.indexOf(v) !== -1) {
-                    return v >= 1000 ? (v / 1000) + 'K%' : v + '%';
-                  }
-                  return '';
-                }
-              },
-              grid: { color: 'rgba(255,255,255,0.04)' }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Niveau bague (destination)',
-                color: '#5a7a9a',
-                font: { size: 11 }
-              },
-              ticks: {
-                color: '#6a8aa8',
-                font: { size: 9 },
-                maxTicksLimit: 18,
-                callback: function (val, idx) {
-                  var lv = lvs[idx];
-                  if (!lv) return '';
-                  if (lv === 2 || lv === 301 || lv % 50 === 1 || lv % 50 === 0) return lv;
-                  return '';
-                }
-              },
-              grid: { display: false }
-            }
-          },
-          plugins: {
-            legend: {
-              display: true,
-              position: 'top',
-              labels: {
-                color: '#8899aa',
-                font: { size: 11 },
-                boxWidth: 14,
-                padding: 14
-              }
-            },
-            tooltip: {
-              backgroundColor: 'rgba(8,18,34,0.97)',
-              titleColor: '#d8e8f8',
-              bodyColor: '#8899bb',
-              borderColor: 'rgba(32,212,168,0.25)',
-              borderWidth: 1,
-              padding: 10,
-              callbacks: {
-                title: function (items) {
-                  var lv = lvs[items[0].dataIndex];
-                  return 'Lv ' + (lv - 1) + ' → ' + lv;
-                },
-                label: function (item) {
-                  if (item.datasetIndex !== 0) return '  ' + item.dataset.label;
-                  var eff = Math.round(item.raw);
-                  var zone =
-                    eff >= T_ATK ? '✅ Bague > Global (ATK + HP + DEF)' :
-                    eff >= T_DEF ? '🟡 Bague > Global (DEF seulement)' :
-                                   '❌ Global > Bague';
-                  return '  ' + eff.toLocaleString('fr-FR') + '% — ' + zone;
-                }
-              }
-            }
-          }
-        }
-      });
-    }
   })();
 
   // Translate <select> options (CSS hidden class doesn't work inside <option>)

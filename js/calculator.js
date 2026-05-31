@@ -308,42 +308,50 @@
       .reduce(function (s, el) { return s + parseK(el.value); }, 0);
   }
 
+  /* Show "Autres" remainder for an expanded section.
+     total = value in the quick field
+     detailSum = sum of the individual breakdown inputs
+     otherId = DOM id of the "Autres" span */
+  function showOther(total, detailSum, otherId) {
+    var el = n(otherId);
+    if (!el) return;
+    var other = total - detailSum;
+    if (other < -0.005) {
+      el.textContent = '⚠ −' + fmtDec(Math.abs(other), 2);
+      el.className = 'bsc-other-val overflow';
+    } else {
+      el.textContent = fmtDec(Math.max(other, 0), 2);
+      el.className = 'bsc-other-val';
+    }
+  }
+
   function updateBasicStats() {
-    var flatExp = n('bsc-flat-section').classList.contains('expanded');
-    var baseExp = n('bsc-base-section').classList.contains('expanded');
-    var globalExp = n('bsc-global-section').classList.contains('expanded');
+    /* The quick (total) fields are ALWAYS the source of truth.
+       Individual breakdown lines are optional — they never override the total.
+       "Autres" = total − sum(individual lines entered). */
+    var flat     = v('bsc-flat-quick');
+    var basePct  = v('bsc-base-quick');
+    var globalPct= v('bsc-global-quick');
 
-    var flat, basePct, globalPct;
-    if (flatExp) {
-      flat = sumInputs('.bsc-flat-input');
-      n('bsc-flat-quick').value = Math.round(flat);
-    } else {
-      flat = v('bsc-flat-quick');
-    }
-    if (baseExp) {
-      basePct = sumInputs('.bsc-base-input');
-      n('bsc-base-quick').value = fmtDec(basePct, 2);
-    } else {
-      basePct = v('bsc-base-quick');
-    }
-    if (globalExp) {
-      globalPct = sumInputs('.bsc-global-input');
-      n('bsc-global-quick').value = fmtDec(globalPct, 2);
-    } else {
-      globalPct = v('bsc-global-quick');
-    }
+    /* Compute and display remainders when a section is expanded */
+    if (n('bsc-flat-section').classList.contains('expanded'))
+      showOther(flat,      sumInputs('.bsc-flat-input'),   'bsc-flat-other-val');
+    if (n('bsc-base-section').classList.contains('expanded'))
+      showOther(basePct,   sumInputs('.bsc-base-input'),   'bsc-base-other-val');
+    if (n('bsc-global-section').classList.contains('expanded'))
+      showOther(globalPct, sumInputs('.bsc-global-input'), 'bsc-global-other-val');
 
-    var baseFactor = 1 + basePct / 100;
+    var baseFactor   = 1 + basePct   / 100;
     var globalFactor = 1 + globalPct / 100;
-    var result = flat * baseFactor * globalFactor;
+    var result       = flat * baseFactor * globalFactor;
 
-    n('bsc-r-flat').textContent = fmt(flat);
-    n('bsc-r-basepct').textContent = fmtDec(basePct, 2) + '%';
-    n('bsc-r-basefactor').textContent = fmtDec(baseFactor, 4) + '×';
-    n('bsc-r-globalpct').textContent = fmtDec(globalPct, 2) + '%';
+    n('bsc-r-flat').textContent       = fmt(flat);
+    n('bsc-r-basepct').textContent    = fmtDec(basePct,   2) + '%';
+    n('bsc-r-basefactor').textContent = fmtDec(baseFactor,   4) + '×';
+    n('bsc-r-globalpct').textContent  = fmtDec(globalPct,  2) + '%';
     n('bsc-r-globalfactor').textContent = fmtDec(globalFactor, 4) + '×';
-    n('bsc-r-final').textContent = fmt(result);
-    n('bsc-r-breakdown').textContent =
+    n('bsc-r-final').textContent      = fmt(result);
+    n('bsc-r-breakdown').textContent  =
       fmt(flat) + ' × ' + fmtDec(baseFactor, 4) + ' × ' + fmtDec(globalFactor, 4) + ' = ' + fmt(result);
   }
 
