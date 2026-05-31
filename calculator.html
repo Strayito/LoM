@@ -184,10 +184,19 @@
     }
     .ring-cur-btn.active[data-cur="hearts"] { border-color:#e05c6f; color:#e05c6f; background:rgba(224,92,111,0.1); }
     .ring-cur-btn.active[data-cur="db"]     { border-color:var(--gold); color:var(--gold); background:rgba(232,192,64,0.1); }
-    .ring-result-hl { background:rgba(232,192,64,0.06); border-radius:var(--r); }
+    .ring-result-hl { background:rgba(232,192,64,0.07); border-radius:var(--r); padding-left:6px; padding-right:6px; margin-left:-6px; margin-right:-6px; }
     .ring-result-hl .val { color:var(--gold) !important; font-size:1.08rem; }
     .ring-divider { border:none; border-top:1px solid var(--border); margin:10px 0; }
     .ring-sub-label { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.07em; margin:10px 0 4px; }
+    .ring-lv-num { color:var(--teal); font-weight:800; }
+    .ring-warn { color:var(--red); font-size:0.78rem; display:none; margin-top:4px; }
+    .btn-ring-reset {
+      margin-top:14px; padding:7px 16px; border-radius:var(--r);
+      border:1px solid var(--border); background:var(--bg-secondary);
+      color:var(--text-secondary); font-size:0.82rem; font-weight:700;
+      cursor:pointer; transition:all 0.15s; display:block; width:100%;
+    }
+    .btn-ring-reset:hover { border-color:var(--red); color:var(--red); background:rgba(224,64,64,0.07); }
   </style>
 </head>
 <body>
@@ -1802,6 +1811,18 @@
           <a href="data/rings.html" style="color:var(--teal);margin-left:6px">→ <span class="lang-fr">Table complète</span><span class="lang-en hidden">Full table</span><span class="lang-sk hidden">Celá tabuľka</span></a>
         </div>
 
+        <div class="ring-warn" id="ring-warn-lv">
+          ⚠️ <span class="lang-fr">Le niveau cible doit être supérieur au niveau actuel.</span>
+             <span class="lang-en hidden">Target level must be higher than current level.</span>
+             <span class="lang-sk hidden">Cieľová úroveň musí byť vyššia ako aktuálna.</span>
+        </div>
+
+        <button type="button" class="btn-ring-reset" id="ring-reset">
+          🔄 <span class="lang-fr">Réinitialiser</span>
+             <span class="lang-en hidden">Reset</span>
+             <span class="lang-sk hidden">Resetovať</span>
+        </button>
+
       </form>
 
       <!-- Results panel -->
@@ -1840,18 +1861,20 @@
                <span class="lang-sk hidden">% štatistík (prsteň)</span>
           </div>
           <div class="result-row">
-            <span class="lbl" id="ring-stat-from-lbl">
-              <span class="lang-fr">Stats Lv départ</span>
-              <span class="lang-en hidden">Start Lv stats</span>
-              <span class="lang-sk hidden">Štat. počiat. úr.</span>
+            <span class="lbl">
+              <span class="lang-fr">Stats Lv </span>
+              <span class="lang-en hidden">Stats Lv </span>
+              <span class="lang-sk hidden">Štat. Lv </span>
+              <span id="ring-from-lv-disp" class="ring-lv-num">1</span>
             </span>
             <span class="val" id="ring-res-stat-from">—</span>
           </div>
           <div class="result-row">
-            <span class="lbl" id="ring-stat-to-lbl">
-              <span class="lang-fr">Stats Lv cible</span>
-              <span class="lang-en hidden">Target Lv stats</span>
-              <span class="lang-sk hidden">Štat. cieľovej úr.</span>
+            <span class="lbl">
+              <span class="lang-fr">Stats Lv </span>
+              <span class="lang-en hidden">Stats Lv </span>
+              <span class="lang-sk hidden">Štat. Lv </span>
+              <span id="ring-to-lv-disp" class="ring-lv-num">10</span>
             </span>
             <span class="val" id="ring-res-stat-to">—</span>
           </div>
@@ -2130,19 +2153,30 @@
       rStats[toLv] = stats;
     });
 
-    /* Fill any gaps in rCumul using sequential cost sums */
+    /* Fill gaps in rCumul with sequential cost sums — only when cost data exists */
     var runC = 0;
     for (var lv = 2; lv <= 302; lv++) {
       if (rCumul[lv] !== undefined) {
-        runC = rCumul[lv]; /* trust stored cumulative */
-      } else {
-        var c = rCost[lv - 1];
-        if (c && !isNaN(c)) runC += c;
+        runC = rCumul[lv]; /* trust stored value */
+      } else if (rCost[lv - 1] !== undefined) {
+        runC += rCost[lv - 1];
         rCumul[lv] = runC;
       }
+      /* If neither cumul nor cost is known, leave rCumul[lv] undefined (gap) */
     }
 
-    function cumulAt(lv) { return lv <= 1 ? 0 : (rCumul[lv] || 0); }
+    /* cumulAt returns null for levels with no data (prevents treating gaps as free) */
+    function cumulAt(lv) {
+      if (lv <= 1) return 0;
+      return rCumul[lv] !== undefined ? rCumul[lv] : null;
+    }
+
+    /* hasStats returns true if a level has at least one non-null stat */
+    function hasStats(lv) {
+      var s = rStats[lv];
+      return s ? s.some(function (v) { return v !== null; }) : false;
+    }
+
     function statsAt(lv, ri) {
       var s = rStats[lv];
       return (s && s[ri] != null) ? s[ri] : null;
@@ -2152,63 +2186,88 @@
     var MAX_LV  = 301;
     var curRank = 1; /* default: Rank I */
 
+    function readInputs() {
+      var fromLv = Math.max(1, Math.min(300, parseInt(document.getElementById('ring-from-lv').value)  || 1));
+      var prog   = Math.max(0,              parseInt(document.getElementById('ring-progress').value)   || 0);
+      var toLvRaw= parseInt(document.getElementById('ring-to-lv').value) || (fromLv + 1);
+      var toLv   = Math.min(MAX_LV, Math.max(2, toLvRaw));
+      return { fromLv: fromLv, prog: prog, toLv: toLv };
+    }
+
     function calcRing() {
-      var fromLv = Math.max(1, Math.min(300, parseInt(document.getElementById('ring-from-lv').value)   || 1));
-      var prog   = Math.max(0,              parseInt(document.getElementById('ring-progress').value)    || 0);
-      var toLv   = Math.max(fromLv + 1, Math.min(MAX_LV, parseInt(document.getElementById('ring-to-lv').value) || (fromLv + 1)));
+      var inp      = readInputs();
+      var fromLv   = inp.fromLv;
+      var toLv     = inp.toLv;
+      var prog     = inp.prog;
+      var invalid  = toLv <= fromLv;
+
+      /* Show/hide validation warning */
+      var warn = document.getElementById('ring-warn-lv');
+      if (warn) warn.style.display = invalid ? 'block' : 'none';
 
       var stepCost = rCost[fromLv] || 0;
-      if (stepCost > 0) prog = Math.min(prog, stepCost - 1);
+      if (stepCost > 0) prog = Math.min(prog, stepCost);
 
-      /* Progress hint under the field */
+      /* Progress hint */
       var hint = document.getElementById('ring-progress-hint');
-      if (hint) hint.textContent = stepCost > 0 ? (prog + ' / ' + stepCost + ' 💗  pour Lv ' + fromLv + ' → ' + (fromLv + 1)) : '';
+      if (hint) hint.textContent = stepCost > 0 ? (prog + ' / ' + stepCost + ' 💗 pour Lv ' + fromLv + ' → ' + (fromLv + 1)) : '';
 
-      /* Hearts & DB needed */
-      var heartsNeed = Math.max(0, cumulAt(toLv) - cumulAt(fromLv) - prog);
-      /* 100 💗 = 5 DB  →  1 DB = 20 💗. Round up to whole packs of 5 DB (= 100 💗). */
-      var dbNeed = heartsNeed === 0 ? 0 : Math.ceil(heartsNeed / 100) * 5;
+      /* Hearts & DB */
+      var cTo        = cumulAt(toLv);
+      var cFrom      = cumulAt(fromLv);
+      var heartsNeed = (cTo !== null && cFrom !== null) ? Math.max(0, cTo - cFrom - prog) : null;
+      /* 100 💗 = 5 DB → 1 DB = 20 💗 → Math.ceil(hearts / 20) DB */
+      var dbNeed     = heartsNeed !== null ? (heartsNeed === 0 ? 0 : Math.ceil(heartsNeed / 20)) : null;
 
       /* Stats */
       var sFrom = statsAt(fromLv, curRank);
-      var sTo   = statsAt(toLv,   curRank);
+      var sTo   = hasStats(toLv) ? statsAt(toLv, curRank) : null;
       var sGain = (sFrom != null && sTo != null) ? (sTo - sFrom) : null;
 
       /* Update results */
-      setEl('ring-res-hearts',   fmtN(heartsNeed) + ' 💗');
-      setEl('ring-res-db',       fmtN(dbNeed) + ' 💎 DB');
+      setEl('ring-res-hearts',    heartsNeed !== null ? fmtN(heartsNeed) + ' 💗' : 'N/A');
+      setEl('ring-res-db',        dbNeed     !== null ? fmtN(dbNeed) + ' 💎 DB'  : 'N/A');
       setEl('ring-res-stat-from', fmtPct(sFrom));
       setEl('ring-res-stat-to',   fmtPct(sTo));
-      setEl('ring-res-stat-gain', sGain != null ? '+' + fmtPct(sGain) : 'N/A');
+      setEl('ring-res-stat-gain', sGain != null ? '+' + fmtPct(sGain) : '—');
 
-      /* Dynamic level labels */
-      var el1 = document.getElementById('ring-stat-from-lbl');
-      var el2 = document.getElementById('ring-stat-to-lbl');
-      var lg  = localStorage.getItem('siteLang') || 'fr';
-      if (el1) el1.textContent = (lg === 'fr' ? 'Stats Lv ' : 'Stats Lv ') + fromLv;
-      if (el2) el2.textContent = (lg === 'fr' ? 'Stats Lv ' : 'Stats Lv ') + toLv;
+      /* Level number spans (safe — doesn't overwrite lang spans) */
+      setEl('ring-from-lv-disp', fromLv);
+      setEl('ring-to-lv-disp',   toLv);
 
       calcBonus();
     }
 
     function calcBonus() {
-      var fromLv   = Math.max(1, Math.min(300, parseInt(document.getElementById('ring-from-lv').value)  || 1));
-      var prog     = Math.max(0,              parseInt(document.getElementById('ring-progress').value)   || 0);
+      var inp      = readInputs();
+      var fromLv   = inp.fromLv;
+      var prog     = inp.prog;
       var stepCost = rCost[fromLv] || 0;
-      if (stepCost > 0) prog = Math.min(prog, stepCost - 1);
+      if (stepCost > 0) prog = Math.min(prog, stepCost);
 
       var amount = Math.max(0, parseInt(document.getElementById('ring-bonus-amount').value) || 0);
       var isDB   = !!document.querySelector('#ring-form .ring-cur-btn.active[data-cur="db"]');
       var hearts = isDB ? amount * 20 : amount;
 
-      /* Budget = (cumulative already spent to be at fromLv) + progress + new hearts */
-      var budget = cumulAt(fromLv) + prog + hearts;
+      var cFrom  = cumulAt(fromLv);
+      if (cFrom === null) {
+        setEl('ring-bonus-levels',    '—');
+        setEl('ring-bonus-to-lv',     '—');
+        setEl('ring-bonus-stat-gain', '—');
+        return;
+      }
 
+      /* Budget = cumulative already spent at fromLv + progress in current lv + new hearts */
+      var budget    = cFrom + prog + hearts;
       var reachable = fromLv;
+
       for (var lv = fromLv + 1; lv <= MAX_LV; lv++) {
+        /* Stop at data gaps (no valid stats or no cumul data) */
+        if (!hasStats(lv)) break;
         var c = cumulAt(lv);
-        if (c > 0 && c <= budget) reachable = lv;
-        else if (c > budget)      break;
+        if (c === null) break;
+        if (c <= budget) reachable = lv;
+        else             break;
       }
 
       var levelsGained = reachable - fromLv;
@@ -2218,7 +2277,7 @@
 
       setEl('ring-bonus-levels',    '+' + levelsGained + ' Lv');
       setEl('ring-bonus-to-lv',     'Lv ' + reachable);
-      setEl('ring-bonus-stat-gain', sGain != null ? '+' + fmtPct(sGain) : 'N/A');
+      setEl('ring-bonus-stat-gain', sGain != null ? '+' + fmtPct(sGain) : '—');
     }
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -2227,8 +2286,8 @@
       if (!rc) return;
       RANKS.forEach(function (lbl, i) {
         var btn = document.createElement('button');
-        btn.type      = 'button';
-        btn.className = 'ring-rank-btn' + (i === curRank ? ' active' : '');
+        btn.type        = 'button';
+        btn.className   = 'ring-rank-btn' + (i === curRank ? ' active' : '');
         btn.textContent = lbl;
         btn.dataset.ri  = i;
         btn.addEventListener('click', function () {
@@ -2240,7 +2299,7 @@
         rc.appendChild(btn);
       });
 
-      /* Wire inputs */
+      /* Wire form inputs */
       ['ring-from-lv', 'ring-progress', 'ring-to-lv', 'ring-bonus-amount'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) el.addEventListener('input', calcRing);
@@ -2254,6 +2313,27 @@
           calcBonus();
         });
       });
+
+      /* Reset button */
+      var resetBtn = document.getElementById('ring-reset');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+          document.getElementById('ring-from-lv').value     = '1';
+          document.getElementById('ring-progress').value    = '0';
+          document.getElementById('ring-to-lv').value       = '10';
+          document.getElementById('ring-bonus-amount').value = '500';
+          /* Reset rank to Rank I */
+          curRank = 1;
+          rc.querySelectorAll('.ring-rank-btn').forEach(function (b, i) {
+            b.classList.toggle('active', i === 1);
+          });
+          /* Reset currency to hearts */
+          document.querySelectorAll('#ring-form .ring-cur-btn').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.cur === 'hearts');
+          });
+          calcRing();
+        });
+      }
 
       calcRing();
     });
